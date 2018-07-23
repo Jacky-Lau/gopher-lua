@@ -4,10 +4,10 @@ import (
 	"reflect"
 )
 
-func checkChannel(L *LState, idx int) reflect.Value {
-	ch := L.CheckChannel(idx)
-	return reflect.ValueOf(ch)
-}
+// func checkChannel(L *LState, idx int) reflect.Value {
+// 	ch := L.CheckChannel(idx)
+// 	return reflect.ValueOf(ch)
+// }
 
 func checkGoroutineSafe(L *LState, idx int) LValue {
 	v := L.CheckAny(2)
@@ -118,17 +118,28 @@ func channelSelect(L *LState) int {
 }
 
 var channelMethods = map[string]LGFunction{
-	"receive": channelReceive,
-	"send":    channelSend,
-	"close":   channelClose,
+	"receive":    channelReceive,
+	"receiveall": channelReceiveAll,
+	"send":       channelSend,
+	"close":      channelClose,
 }
 
 func channelReceive(L *LState) int {
-	rch := checkChannel(L, 1)
-	v, ok := rch.Recv()
+	// rch := checkChannel(L, 1)
+	// v, ok := rch.Recv()
+	// if ok {
+	// 	L.Push(LTrue)
+	// 	L.Push(v.Interface().(LValue))
+	// } else {
+	// 	L.Push(LFalse)
+	// 	L.Push(LNil)
+	// }
+	// return 2
+	ch := L.CheckChannel(1)
+	v, ok := <-ch
 	if ok {
 		L.Push(LTrue)
-		L.Push(v.Interface().(LValue))
+		L.Push(v)
 	} else {
 		L.Push(LFalse)
 		L.Push(LNil)
@@ -136,16 +147,33 @@ func channelReceive(L *LState) int {
 	return 2
 }
 
+func channelReceiveAll(L *LState) int {
+	ch := L.CheckChannel(1)
+	num := 0
+	for v := range ch {
+		L.Push(v)
+		num++
+	}
+	return num
+}
+
 func channelSend(L *LState) int {
-	rch := checkChannel(L, 1)
+	// rch := checkChannel(L, 1)
+	// v := checkGoroutineSafe(L, 2)
+	// rch.Send(reflect.ValueOf(v))
+	// return 0
+	ch := L.CheckChannel(1)
 	v := checkGoroutineSafe(L, 2)
-	rch.Send(reflect.ValueOf(v))
+	ch <- v
 	return 0
 }
 
 func channelClose(L *LState) int {
-	rch := checkChannel(L, 1)
-	rch.Close()
+	// rch := checkChannel(L, 1)
+	// rch.Close()
+	// return 0
+	ch := L.CheckChannel(1)
+	close(ch)
 	return 0
 }
 
